@@ -10,7 +10,10 @@ interface TmdbResponse {
   total_results: number;
 }
 
-async function fetchMovies(query: string): Promise<Movie[]> {
+async function fetchMovies(
+  query: string,
+  page: number = 1,
+): Promise<TmdbResponse | null> {
   if (!TMDB_ACCESS_TOKEN) {
     console.error("TMDB Access Token is missing! Check your .env file.");
   }
@@ -18,6 +21,7 @@ async function fetchMovies(query: string): Promise<Movie[]> {
   const config = {
     params: {
       query: query,
+      page: page,
       include_adult: false,
       language: "en-US",
     },
@@ -32,10 +36,10 @@ async function fetchMovies(query: string): Promise<Movie[]> {
       config,
     );
 
-    return response.data.results;
+    return response.data;
   } catch (error) {
     console.error("Error fetching movies:", error);
-    return [];
+    return null;
   }
 }
 export default fetchMovies;

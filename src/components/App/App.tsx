@@ -9,8 +9,11 @@ import MovieGrid from "../MovieGrid/MovieGrid";
 import Loader from "../Loader/Loader";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import MovieModal from "../MovieModal/MovieModal";
+import Paginate from "../ReactPaginate/ReactPaginate";
 
 const App = () => {
+  const [page, setPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(0);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [query, setQuery] = useState<string>("");
@@ -23,6 +26,7 @@ const App = () => {
   const handleSearchSubmit = (newQuery: string) => {
     setMovies([]);
     setError(false);
+    setPage(1);
     setQuery(newQuery);
   };
 
@@ -32,14 +36,16 @@ const App = () => {
     const getMovies = async () => {
       setIsLoading(true);
       try {
-        const data = await fetchMovies(query);
+        const data = await fetchMovies(query, page);
 
-        if (data.length === 0) {
+        if (!data || data.results.length === 0) {
           toast.error("No movies found for your request.");
+          setMovies([]);
           return;
         }
 
-        setMovies(data);
+        setMovies(data.results);
+        setTotalPages(data.total_pages);
       } catch {
         setError(true);
         toast.error("Something went wrong. Please try again.");
@@ -49,7 +55,7 @@ const App = () => {
     };
 
     getMovies();
-  }, [query]);
+  }, [query, page]);
 
   return (
     <div>
@@ -64,8 +70,12 @@ const App = () => {
       )}
 
       {!error && movies.length > 0 && (
-        <MovieGrid movies={movies} onSelect={handleSelectMovie} />
+        <>
+          <MovieGrid movies={movies} onSelect={handleSelectMovie} />
+          <Paginate totalPages={totalPages} page={page} setPage={setPage} />
+        </>
       )}
+
       {isLoading && <Loader />}
       <Toaster position="top-right" reverseOrder={false} />
     </div>
