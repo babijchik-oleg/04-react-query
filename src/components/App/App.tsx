@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import SearchBar from "../SearchBar/SearchBar";
 import "./App.css";
 import { Toaster } from "react-hot-toast";
@@ -10,57 +10,48 @@ import Loader from "../Loader/Loader";
 import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import MovieModal from "../MovieModal/MovieModal";
 import Paginate from "../ReactPaginate/ReactPaginate";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 const App = () => {
   const [page, setPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(0);
-  const [movies, setMovies] = useState<Movie[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [query, setQuery] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<boolean>(false);
+
+  const { data, isLoading, isError, isPlaceholderData } = useQuery({
+    queryKey: ["movies", query, page],
+    queryFn: async () => {
+      const res = await fetchMovies(query, page);
+      if (!res || res.results.length === 0) {
+        toast.error("No movies found for your request.");
+        return { results: [], total_pages: 0 };
+      }
+      return res;
+    },
+    enabled: Boolean(query),
+    placeholderData: keepPreviousData,
+    meta: {
+      onError: () => {
+        toast.error("Something went wrong. Please try again.");
+      },
+    },
+  });
+
   const handleSelectMovie = (movie: Movie) => {
     setSelectedMovie(movie);
   };
 
   const handleSearchSubmit = (newQuery: string) => {
-    setMovies([]);
-    setError(false);
     setPage(1);
     setQuery(newQuery);
   };
 
-  useEffect(() => {
-    if (!query) return;
-
-    const getMovies = async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchMovies(query, page);
-
-        if (!data || data.results.length === 0) {
-          toast.error("No movies found for your request.");
-          setMovies([]);
-          return;
-        }
-
-        setMovies(data.results);
-        setTotalPages(data.total_pages);
-      } catch {
-        setError(true);
-        toast.error("Something went wrong. Please try again.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getMovies();
-  }, [query, page]);
+  const movies = data?.results || [];
+  const totalPages = data?.total_pages || 0;
 
   return (
     <div>
       <SearchBar onSubmit={handleSearchSubmit} />
-      {error && <ErrorMessage />}
+      {isError && <ErrorMessage />}
 
       {selectedMovie && (
         <MovieModal
@@ -69,10 +60,12 @@ const App = () => {
         />
       )}
 
-      {!error && movies.length > 0 && (
+      {!isError && movies.length > 0 && (
         <>
-          <MovieGrid movies={movies} onSelect={handleSelectMovie} />
-          <Paginate totalPages={totalPages} page={page} setPage={setPage} />
+          <div style={{ opacity: isPlaceholderData ? 0.6 : 1 }}>
+            <MovieGrid movies={movies} onSelect={handleSelectMovie} />
+            <Paginate totalPages={totalPages} page={page} setPage={setPage} />
+          </div>
         </>
       )}
 
