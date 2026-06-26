@@ -45,8 +45,8 @@ const App = () => {
     setQuery(newQuery);
   };
 
-  const movies = data?.results || [];
-  const totalPages = data?.total_pages || 0;
+  const movies = (data && data.results) || [];
+  const totalPages = (data && data.total_pages) || 0;
 
   return (
     <div>
