@@ -70,7 +70,13 @@ const App = () => {
         <>
           <div style={{ opacity: isPlaceholderData ? 0.6 : 1 }}>
             <MovieGrid movies={movies} onSelect={handleSelectMovie} />
-            <Paginate totalPages={totalPages} page={page} setPage={setPage} />
+            {totalPages > 1 && (
+              <Paginate
+                pageCount={totalPages}
+                forcePage={page}
+                onPageChange={setPage}
+              />
+            )}
           </div>
         </>
       )}
