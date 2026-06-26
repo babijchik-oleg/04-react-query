@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SearchBar from "../SearchBar/SearchBar";
 import "./App.css";
 import { Toaster } from "react-hot-toast";
@@ -17,24 +17,30 @@ const App = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [query, setQuery] = useState<string>("");
 
-  const { data, isLoading, isError, isPlaceholderData } = useQuery({
-    queryKey: ["movies", query, page],
-    queryFn: async () => {
-      const res = await fetchMovies(query, page);
-      if (!res || res.results.length === 0) {
-        toast.error("No movies found for your request.");
-        return { results: [], total_pages: 0 };
-      }
-      return res;
-    },
-    enabled: Boolean(query),
-    placeholderData: keepPreviousData,
-    meta: {
-      onError: () => {
-        toast.error("Something went wrong. Please try again.");
+  const { data, isPending, isFetching, isError, isSuccess, isPlaceholderData } =
+    useQuery({
+      queryKey: ["movies", query, page],
+      queryFn: async () => {
+        const res = await fetchMovies(query, page);
+        if (!res) {
+          return { results: [], total_pages: 0 };
+        }
+        return res;
       },
-    },
-  });
+      enabled: Boolean(query),
+      placeholderData: keepPreviousData,
+    });
+  useEffect(() => {
+    if (isSuccess && data?.results.length === 0) {
+      toast.error("No movies found for your request.");
+    }
+  }, [isSuccess, data, query]);
+
+  useEffect(() => {
+    if (isError) {
+      toast.error("Something went wrong. Please try again.");
+    }
+  }, [isError]);
 
   const handleSelectMovie = (movie: Movie) => {
     setSelectedMovie(movie);
@@ -60,7 +66,7 @@ const App = () => {
         />
       )}
 
-      {!isError && movies.length > 0 && (
+      {isSuccess && movies.length > 0 && (
         <>
           <div style={{ opacity: isPlaceholderData ? 0.6 : 1 }}>
             <MovieGrid movies={movies} onSelect={handleSelectMovie} />
@@ -69,7 +75,7 @@ const App = () => {
         </>
       )}
 
-      {isLoading && <Loader />}
+      {query && (isPending || isFetching) && <Loader />}
       <Toaster position="top-right" reverseOrder={false} />
     </div>
   );
